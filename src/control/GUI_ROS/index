@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ROV Mission Control - ROS 2 Jazzy</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/eventemitter2@6.4.9/lib/eventemitter2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/roslib@1/build/roslib.min.js"></script>
+</head>
+<body>
+    <div class="dashboard">
+        <header>
+            <h1>ROV COMMAND CENTER</h1>
+            
+            <div class="status-group">
+                <div id="ros-light" class="indicator"></div>
+                <span id="ros-status">ROS OFFLINE</span>
+            </div>
+
+            <div class="status-group">
+                <div id="status-light" class="indicator"></div>
+                <span id="connection-status">PAD DISCONNECTED</span>
+            </div>
+        </header>
+
+        <div class="main-container">
+            <aside class="telemetry">
+                <h3 style="margin-top: 0;">Telemetry</h3>
+                <div class="stat">Depth: <span id="depth">0.00</span> m</div>
+                <div class="stat">Temp: <span id="temp">0.0</span> °C</div>
+                <div class="stat">Battery: <span id="battery">0</span> %</div>
+                <div class="stat">Heading: <span id="heading">0</span>°</div>
+                <hr style="width: 100%; border-color: #333; margin: 15px 0;">
+                <div class="stat">Cam: <span id="cam-status" style="color: red;">OFFLINE</span></div>
+            </aside>
+
+            <main class="viewport">
+                <img id="video-feed" src="" alt="WAITING FOR ROS IMAGE TOPIC..." onerror="this.style.display='none'">
+                
+                <div class="hud">
+                    <div class="crosshair">+</div>
+                </div>
+            </main>
+
+            <aside class="logs">
+                <h3 style="margin-top: 0;">Mission Log</h3>
+                <div id="log-window">
+                    <p style="margin:2px 0;">> System Initialized...</p>
+                </div>
+            </aside>
+        </div>
+
+        <footer>
+            <button class="ctrl-btn" onmousedown="sendCommand('UP')">ASCEND</button>
+            <button class="ctrl-btn" onmousedown="sendCommand('DOWN')">DESCEND</button>
+            <button class="ctrl-btn" onclick="toggleCamera()">TOGGLE CAM</button>
+            <button class="ctrl-btn" onclick="sendCommand('LIGHTS_TOGGLE')">LIGHTS</button>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

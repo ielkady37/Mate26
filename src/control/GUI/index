@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ROV Mission Control</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dashboard">
+        <header>
+            <h1>ROV COMMAND CENTER</h1>
+            <div id="status-light"></div>
+            <span id="connection-status">DISCONNECTED</span>
+        </header>
+
+        <div class="main-container">
+            <aside class="telemetry">
+                <h3 style="margin-top: 0;">Telemetry</h3>
+                <div class="stat">Depth: <span id="depth">0.0</span> m</div>
+                <div class="stat">Temp: <span id="temp">18</span>°C</div>
+                <div class="stat">Battery: <span id="battery">98</span>%</div>
+                <div class="stat">Heading: <span id="heading">0</span>°</div>
+                <hr style="width: 100%; border-color: #333; margin: 15px 0;">
+                <div class="stat">Cam: <span id="cam-status" style="color: red;">OFFLINE</span></div>
+            </aside>
+
+            <main class="viewport">
+                <img id="video-feed" src="" alt="WAITING FOR SIGNAL..." onerror="this.style.display='none'">
+                
+                <div class="hud">
+                    <div class="crosshair">+</div>
+                </div>
+            </main>
+
+            <aside class="logs">
+                <h3 style="margin-top: 0;">Mission Log</h3>
+                <div id="log-window">
+                    <p style="margin:2px 0;">> System Initialized...</p>
+                </div>
+            </aside>
+        </div>
+
+        <footer>
+            <button class="ctrl-btn" onmousedown="sendCommand('UP')">ASCEND</button>
+            <button class="ctrl-btn" onmousedown="sendCommand('DOWN')">DESCEND</button>
+            <button class="ctrl-btn" onclick="toggleCamera()">TOGGLE CAM</button>
+            <button class="ctrl-btn" onclick="toggleLights()">LIGHTS</button>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

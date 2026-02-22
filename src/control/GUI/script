@@ -1,0 +1,129 @@
+// --- CONFIGURATION ---
+const STREAM_URL = "http://192.168.137.219:8080/video"; // Change this to your ROV IP
+let cameraActive = false;
+
+// --- 1. CAMERA LOGIC ---
+function toggleCamera() {
+    const videoEl = document.getElementById('video-feed');
+    const statusEl = document.getElementById('cam-status');
+    
+    if (!cameraActive) {
+        videoEl.src = STREAM_URL;
+        videoEl.style.display = 'block';
+        statusEl.innerText = "ONLINE";
+        statusEl.style.color = "#00ff41";
+        cameraActive = true;
+        sendCommand("CAMERA_START");
+    } else {
+        videoEl.src = ""; // Clear source to stop stream
+        videoEl.style.display = 'none';
+        statusEl.innerText = "OFFLINE";
+        statusEl.style.color = "red";
+        cameraActive = false;
+        sendCommand("CAMERA_STOP");
+    }
+}
+
+// Dummy function to keep the original HTML 'LIGHTS' button from throwing an error
+function toggleLights() {
+    sendCommand("LIGHTS_TOGGLE");
+}
+
+// --- 2. CORE ROV LOGIC ---
+function sendCommand(action, value = null) {
+    const log = document.getElementById('log-window');
+    const time = new Date().toLocaleTimeString([], { hour12: false });
+    const commandText = value ? `${action} [${value}]` : action;
+    
+    console.log(`Sending command: ${commandText}`);
+    
+    if (log) {
+        log.innerHTML += `<p style="margin:2px 0;">> [${time}] ${commandText}</p>`;
+        log.scrollTop = log.scrollHeight; // This locks the scrollbar to the bottom!
+    }
+    
+    // TODO: Add fetch() or WebSocket code here to actually send to the ROV server
+}
+
+// Keyboard backup
+document.addEventListener('keydown', (event) => {
+    if (event.repeat) return; // Prevent spamming if key is held down
+    switch(event.key.toLowerCase()) {
+        case 'w': sendCommand('MOVE_FORWARD'); break;
+        case 's': sendCommand('MOVE_BACKWARD'); break;
+        case 'a': sendCommand('MOVE_LEFT'); break;
+        case 'd': sendCommand('MOVE_RIGHT'); break;
+        case 'arrowup': sendCommand('THRUST_ASCEND'); break;
+        case 'arrowdown': sendCommand('THRUST_DESCEND'); break;
+        case 'q': toggleCamera(); break; 
+    }
+});
+
+// Mock Telemetry (Updates random numbers every 2 seconds)
+setInterval(() => {
+    const depthEl = document.getElementById('depth');
+    if (depthEl) depthEl.innerText = (Math.random() * 10).toFixed(2);
+}, 2000);
+
+// --- 3. GAMEPAD INTEGRATION ---
+let lastButtons = []; 
+let lastSendTime = 0;
+const NETWORK_TICK_RATE = 100;
+
+const buttonMap = {
+    0: 'GRIPPER_CLOSE', 1: 'GRIPPER_OPEN', 2: 'LIGHTS_TOGGLE', 3: 'CAMERA_TOGGLE',
+    4: 'MANIPULATOR_UP', 5: 'MANIPULATOR_DOWN', 8: 'SYSTEM_RESTART', 9: 'SYSTEM_ARM', 
+    16: 'E_STOP'
+};
+
+function updateGamepad() {
+    const gamepads = navigator.getGamepads();
+    const gp = gamepads[0]; 
+
+    if (!gp) { 
+        requestAnimationFrame(updateGamepad); 
+        return; 
+    }
+
+    // Button Logic
+    gp.buttons.forEach((button, index) => {
+        if (button.pressed && !lastButtons[index]) {
+            const action = buttonMap[index] || `BTN_${index}`;
+            if (action === 'CAMERA_TOGGLE') {
+                toggleCamera();
+            } else {
+                sendCommand(action);
+            }
+        }
+        lastButtons[index] = button.pressed;
+    });
+
+    // Analog Stick Logic
+    const deadzone = 0.15;
+    let lx = Math.abs(gp.axes[0]) < deadzone ? 0 : gp.axes[0];
+    let ly = Math.abs(gp.axes[1]) < deadzone ? 0 : gp.axes[1];
+
+    const now = Date.now();
+    if (now - lastSendTime >= NETWORK_TICK_RATE && (lx !== 0 || ly !== 0)) {
+        sendCommand('ANALOG_DRIVE', `X:${lx.toFixed(2)} Y:${ly.toFixed(2)}`);
+        lastSendTime = now;
+    }
+
+    requestAnimationFrame(updateGamepad);
+}
+
+// Connection Listeners
+window.addEventListener("gamepadconnected", (e) => {
+    console.log("ROV Controller Connected:", e.gamepad.id);
+    document.getElementById('status-light').style.backgroundColor = "#00ff41";
+    document.getElementById('status-light').style.boxShadow = "0 0 10px #00ff41";
+    document.getElementById('connection-status').innerText = "CONTROLLER READY";
+    updateGamepad(); 
+});
+
+window.addEventListener("gamepaddisconnected", () => {
+    console.log("Controller Disconnected");
+    document.getElementById('status-light').style.backgroundColor = "red";
+    document.getElementById('status-light').style.boxShadow = "0 0 5px red";
+    document.getElementById('connection-status').innerText = "DISCONNECTED";
+});

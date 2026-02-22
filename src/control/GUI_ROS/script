@@ -1,0 +1,192 @@
+// --- CONFIGURATION ---
+const ROV_IP = "192.168.1.100"; // <--- CHANGE THIS TO YOUR ROS 2 MACHINE IP
+const ROSBRIDGE_PORT = "9090";
+const VIDEO_PORT = "8080";
+const VIDEO_TOPIC = "/camera/image_raw"; // Ensure this matches your ROS camera topic
+
+// The URL for the web_video_server MJPEG stream
+const STREAM_URL = `http://${ROV_IP}:${VIDEO_PORT}/stream?topic=${VIDEO_TOPIC}&type=mjpeg&width=640&height=480`;
+let cameraActive = false;
+
+// --- 1. ROS 2 CONNECTION SETUP ---
+const ros = new ROSLIB.Ros({
+    url: `ws://${ROV_IP}:${ROSBRIDGE_PORT}`
+});
+
+ros.on('connection', () => {
+    console.log('Connected to ROS 2 websocket server.');
+    const light = document.getElementById('ros-light');
+    light.style.backgroundColor = "#00ff41";
+    light.style.boxShadow = "0 0 10px #00ff41";
+    document.getElementById('ros-status').innerText = "ROS CONNECTED";
+    
+    // Log it to UI
+    logMessage("System", "Connected to ROS 2 Core");
+});
+
+ros.on('error', (error) => {
+    console.log('Error connecting to websocket server: ', error);
+    logMessage("Error", "ROS Connection Failed");
+});
+
+ros.on('close', () => {
+    console.log('Connection to websocket server closed.');
+    const light = document.getElementById('ros-light');
+    light.style.backgroundColor = "red";
+    light.style.boxShadow = "0 0 5px red";
+    document.getElementById('ros-status').innerText = "ROS OFFLINE";
+});
+
+// --- 2. ROS 2 PUBLISHERS (Sending Commands) ---
+
+// Publisher for analog movement (Standard ROS 2 geometry_msgs/msg/Twist)
+const cmdVel = new ROSLIB.Topic({
+    ros: ros,
+    name: '/cmd_vel',
+    messageType: 'geometry_msgs/msg/Twist' 
+});
+
+// Publisher for buttons (Custom string commands)
+const cmdButtons = new ROSLIB.Topic({
+    ros: ros,
+    name: '/rov/button_commands',
+    messageType: 'std_msgs/msg/String'
+});
+
+function sendCommand(action) {
+    // 1. Log to UI
+    logMessage("Action", action);
+    
+    // 2. Publish to ROS 2
+    const msg = new ROSLIB.Message({ data: action });
+    cmdButtons.publish(msg);
+}
+
+// Utility to write to the HTML log window
+function logMessage(prefix, message) {
+    const log = document.getElementById('log-window');
+    const time = new Date().toLocaleTimeString([], { hour12: false });
+    if (log) {
+        log.innerHTML += `<p style="margin:2px 0;">> [${time}] ${prefix}: ${message}</p>`;
+        log.scrollTop = log.scrollHeight;
+    }
+}
+
+// --- 3. ROS 2 SUBSCRIBERS (Receiving Telemetry) ---
+
+// Example: Subscribing to Depth
+const depthListener = new ROSLIB.Topic({
+    ros: ros,
+    name: '/rov/depth',
+    messageType: 'std_msgs/msg/Float32'
+});
+depthListener.subscribe((message) => {
+    document.getElementById('depth').innerText = message.data.toFixed(2);
+});
+
+// Example: Subscribing to Battery
+const batteryListener = new ROSLIB.Topic({
+    ros: ros,
+    name: '/rov/battery',
+    messageType: 'std_msgs/msg/Int32'
+});
+batteryListener.subscribe((message) => {
+    document.getElementById('battery').innerText = message.data;
+});
+
+// --- 4. CAMERA LOGIC ---
+function toggleCamera() {
+    const videoEl = document.getElementById('video-feed');
+    const statusEl = document.getElementById('cam-status');
+    
+    if (!cameraActive) {
+        videoEl.src = STREAM_URL;
+        videoEl.style.display = 'block';
+        statusEl.innerText = "ONLINE";
+        statusEl.style.color = "#00ff41";
+        cameraActive = true;
+        sendCommand("CAMERA_START");
+    } else {
+        videoEl.src = "";
+        videoEl.style.display = 'none';
+        statusEl.innerText = "OFFLINE";
+        statusEl.style.color = "red";
+        cameraActive = false;
+        sendCommand("CAMERA_STOP");
+    }
+}
+
+// Keyboard backup
+document.addEventListener('keydown', (event) => {
+    if (event.repeat) return; 
+    switch(event.key.toLowerCase()) {
+        case 'q': toggleCamera(); break; 
+        // Note: For actual keyboard driving with cmd_vel, you'd want keyup/keydown logic to send Twist messages.
+    }
+});
+
+// --- 5. GAMEPAD INTEGRATION ---
+let lastButtons = []; 
+let lastSendTime = 0;
+const NETWORK_TICK_RATE = 100; // Send twist updates 10x per second
+
+const buttonMap = {
+    0: 'GRIPPER_CLOSE', 1: 'GRIPPER_OPEN', 2: 'LIGHTS_TOGGLE', 3: 'CAMERA_TOGGLE',
+    4: 'MANIPULATOR_UP', 5: 'MANIPULATOR_DOWN', 8: 'SYSTEM_RESTART', 9: 'SYSTEM_ARM', 
+    16: 'E_STOP'
+};
+
+function updateGamepad() {
+    const gp = navigator.getGamepads()[0]; 
+    if (!gp) { requestAnimationFrame(updateGamepad); return; }
+
+    // Buttons -> Publish std_msgs/String
+    gp.buttons.forEach((button, index) => {
+        if (button.pressed && !lastButtons[index]) {
+            const action = buttonMap[index] || `BTN_${index}`;
+            if (action === 'CAMERA_TOGGLE') toggleCamera();
+            else sendCommand(action);
+        }
+        lastButtons[index] = button.pressed;
+    });
+
+    // Analog Sticks -> Publish geometry_msgs/Twist to /cmd_vel
+    const deadzone = 0.15;
+    let lx = Math.abs(gp.axes[0]) < deadzone ? 0 : gp.axes[0]; // Left Stick X (Yaw)
+    let ly = Math.abs(gp.axes[1]) < deadzone ? 0 : gp.axes[1]; // Left Stick Y (Forward/Back)
+    let ry = Math.abs(gp.axes[3]) < deadzone ? 0 : gp.axes[3]; // Right Stick Y (Ascend/Descend)
+
+    const now = Date.now();
+    if (now - lastSendTime >= NETWORK_TICK_RATE) {
+        
+        // Only publish if there is active movement or we need to send a single "stop" command (0,0,0)
+        if (lx !== 0 || ly !== 0 || ry !== 0) {
+            const twist = new ROSLIB.Message({
+                linear: { x: -ly, y: 0.0, z: -ry },   // -ly because stick forward is usually negative Y
+                angular: { x: 0.0, y: 0.0, z: -lx }   // -lx because standard rotation is Right-Hand Rule
+            });
+            cmdVel.publish(twist);
+        }
+        lastSendTime = now;
+    }
+
+    requestAnimationFrame(updateGamepad);
+}
+
+// Gamepad Listeners
+window.addEventListener("gamepadconnected", (e) => {
+    const light = document.getElementById('status-light');
+    light.style.backgroundColor = "#00ff41";
+    light.style.boxShadow = "0 0 10px #00ff41";
+    document.getElementById('connection-status').innerText = "PAD READY";
+    logMessage("Gamepad", `Connected: ${e.gamepad.id}`);
+    updateGamepad(); 
+});
+
+window.addEventListener("gamepaddisconnected", () => {
+    const light = document.getElementById('status-light');
+    light.style.backgroundColor = "red";
+    light.style.boxShadow = "0 0 5px red";
+    document.getElementById('connection-status').innerText = "PAD DISCONNECTED";
+    logMessage("Gamepad", "Disconnected");
+});
