@@ -2,7 +2,7 @@
 import board
 import busio
 from adafruit_pca9685 import PCA9685
-
+import PCA_map1 
 class PCA:    
     def __init__(self, i2c_address=0x40, frequency=50):
         self.frequency = frequency
