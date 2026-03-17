@@ -20,6 +20,11 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+<<<<<<< Updated upstream
+=======
+            'imu_node = control.nodes.IMUNode:main',
+            'depth_node = control.nodes.DepthNode:main',
+>>>>>>> Stashed changes
         ],
     },
 )
