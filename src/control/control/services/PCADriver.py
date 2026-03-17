@@ -26,15 +26,28 @@ class PCA:
         duty_cycle = int((microseconds / period_us) * 65535)
         return min(max(duty_cycle, 0), 65535)
 
-    def PWMWrite(self, channel, microseconds):
+
+    def PWMWrite(self, channel, channel1, ContollerInput):
         if not 0 <= channel <= 15:
             raise ValueError("Channel must be between 0 and 15.")
+        
+        if ContollerInput < -1.0 or ContollerInput > 1.0:
+            raise ValueError("Controller input must be between -1.0 and 1.0.")
 
-        if self.pca is not None:
-            duty_cycle_value = self._microsecondsToDutycycle(microseconds)
+        if self.pca is not None and controller_input > 0:
+            duty_cycle_value = PCA_map1.map1(ContollerInput)
+            
             self.pca.channels[channel].duty_cycle = duty_cycle_value
+            self.pca.channels[channel1].duty_cycle = 0
+            
+        elif self.pca is not None and controller_input < 0:
+            duty_cycle_value = PCA_map1.map1(ContollerInput)
+            self.pca.channels[channel].duty_cycle = 0
+            self.pca.channels[channel1].duty_cycle = duty_cycle_value
         else:
             print(f"Error: PCA at {hex(self.address)} not initialized.")
+
+
 
     def stopAll(self):
         if self.pca is not None:

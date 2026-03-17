@@ -12,16 +12,10 @@ class ExponentialReachController:
         # --- PHASE 1: LINEAR MAPPING WITH DEADZONE ---
         if abs(input_val) < self.deadzone:
             # If in deadzone, set target to the "Stop" values
-            target_pwm = 0.0 if input_val >= 0 else 10000.0
+            target_pwm = 0.0
         else:
-            if input_val > 0:
-                # Forward: Linear 0 to 1 -> 0 to 10,000
-                target_pwm = input_val * 10000.0
-            else:
-                # Reverse: Linear -1 to 0 -> 20,000 to 10,000
-                # Formula: 10,000 + (abs(input) * 10,000)
-                # Note: -1 input = 20,000, -0.01 input = ~10,100
-                target_pwm = 10000.0 + (abs(input_val) * 10000.0)
+            # Forward or Reverse: Linear mapping from 0 to 1 -> 0 to 20,000
+            target_pwm = abs(input_val) * 20000.0
 
         # --- PHASE 2: EXPONENTIAL REACH ---
         # Calculate the gap (error) between where we are and where we want to be
