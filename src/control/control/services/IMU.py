@@ -1,18 +1,25 @@
 #!/usr/bin/env python3
 import time
 import math
+import board
 import adafruit_bno08x as bno
 from digitalio import DigitalInOut
 from adafruit_bno08x.i2c import BNO08X_I2C
 from adafruit_extended_bus import ExtendedI2C
+from digitalio import DigitalInOut, Direction
 
 
 class IMU:
 
-    def __init__(self, address: int = 0x4b, reset_pin: DigitalInOut = None, debug: bool = False):
+    def __init__(self, address: int = 0x4b, debug: bool = True):
         """Initialize BNO085 sensor"""
         try:
             self.i2c = ExtendedI2C(1)
+            reset_pin = DigitalInOut(board.D17) # Change D4 to whatever GPIO you use
+            reset_pin.direction = Direction.OUTPUT
+            self.reset_pin.value = True 
+            time.sleep(0.5)
+            
             self.bno = BNO08X_I2C(self.i2c, address=address, reset=reset_pin, debug=debug)
 
             time.sleep(1)
@@ -61,8 +68,11 @@ class IMU:
         """Return quaternion (i,j,k,real)"""
         try:
             return self.bno.quaternion
-        except Exception:
-            return (0.0, 0.0, 0.0, 1.0)
+        except Exception as e:
+            # Print the actual error to the console so you can see it!
+            print(f"I2C Read Error: {e}") 
+            # Raise it up to the ROS node so it logs a warning
+            raise RuntimeError("IMU Desynced")
 
     def getEulerAngles(self) -> tuple:
         """Return Euler angles (roll, pitch, yaw) in radians"""
