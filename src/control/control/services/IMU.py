@@ -11,16 +11,24 @@ from digitalio import DigitalInOut, Direction
 
 class IMU:
 
-    def __init__(self, address: int = 0x4b, debug: bool = True):
+    # Notice we removed reset_pin from the arguments
+    def __init__(self, address: int = 0x4b, debug: bool = False):
         """Initialize BNO085 sensor"""
         try:
-            self.i2c = ExtendedI2C(1)
-            reset_pin = DigitalInOut(board.D17) # Change D4 to whatever GPIO you use
-            reset_pin.direction = Direction.OUTPUT
-            self.reset_pin.value = True 
-            time.sleep(0.5)
+            self.i2c = ExtendedI2C(4) # Still on Bus 4!
             
-            self.bno = BNO08X_I2C(self.i2c, address=address, reset=reset_pin, debug=debug)
+            max_retries = 5
+            for attempt in range(max_retries):
+                try:
+                    # Explicitly tell the library reset=None so it doesn't touch the pin
+                    self.bno = BNO08X_I2C(self.i2c, address=address, reset=None, debug=debug)
+                    print(f"Connected to BNO085 on attempt {attempt + 1}")
+                    break
+                except Exception as e:
+                    print(f"Init Attempt {attempt + 1} failed: {e}")
+                    if attempt == max_retries - 1:
+                        raise ValueError(f"BNO085 totally failed to initialize: {e}")
+                    time.sleep(0.5) 
 
             time.sleep(1)
 

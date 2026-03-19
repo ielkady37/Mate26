@@ -1,3 +1,3 @@
-float32 altitude
-float32 pressure
-float32 temperature
+float64 altitude
+float64 pressure
+float64 temperature

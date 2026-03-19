@@ -4,38 +4,42 @@ import adafruit_bmp280
 import time
 
 class Depth:
-    """
-        handler for the BMP280 sensor on Raspberry Pi 4.
-    """
-    def __init__(self, sea_level_pa=1013.25):
-        try:
-            # Setup I2C bus for RPi 4
-            self.i2c = busio.I2C(board.SCL, board.SDA)
-            
-            # Initialize sensor (Address 0x76 is common, try 0x77 if it fails)
-            self.sensor = adafruit_bmp280.Adafruit_BMP280_I2C(self.i2c, address=0x76)
-            
-            # Essential for accurate altitude
-            self.sensor.sea_level_pressure = sea_level_pa
-            print(f"BMP280 initialized. Sea Level Pressure set to {sea_level_pa} hPa.")
-            
-        except ValueError:
-            print("Sensor not found at 0x76, trying 0x77...")
-            self.sensor = adafruit_bmp280.Adafruit_BMP280_I2C(self.i2c, address=0x77)
-        except Exception as e:
-            print(f"Critical Error: {e}")
-            self.sensor = None
+    def __init__(self, sea_level_pa=1021.0):
+        """
+        Initializes the BMP280 sensor and applies initial calibration.
+        """
+        self.i2c = busio.I2C(board.SCL, board.SDA)
+        self.sensor = None
+        
+        # Try both common I2C addresses
+        for address in [0x76, 0x77]:
+            try:
+                self.sensor = adafruit_bmp280.Adafruit_BMP280_I2C(self.i2c, address=address)
+                # Factory calibration is loaded automatically by the library here
+                self.sensor.sea_level_pressure = sea_level_pa
+                break
+            except Exception:
+                continue
 
-    def read_altitude(self):
-        """Returns altitude in meters."""
-        return round(self.sensor.altitude, 2) if self.sensor else None
+        if not self.sensor:
+            raise RuntimeError("Could not find BMP280 sensor. Check wiring!")
 
-    def read_pressure(self):
-        """Returns pressure in hectopascals (hPa)."""
-        return round(self.sensor.pressure, 2) if self.sensor else None
+    def tare(self):
+        """
+        Sets the current atmospheric pressure as the 'zero' altitude point.
+        """
+        # Average 10 readings to ignore minor air fluctuations
+        readings = [self.sensor.pressure for _ in range(10)]
+        avg_pressure = sum(readings) / len(readings)
+        self.sensor.sea_level_pressure = avg_pressure
+        return avg_pressure
 
-    def read_temperature(self):
-        """Returns temperature in Celsius."""
-        return round(self.sensor.temperature, 2) if self.sensor else None
-
-   
+    def get_readings(self):
+        """
+        Returns a dictionary of the current sensor values.
+        """
+        return {
+            "altitude": round(self.sensor.altitude, 2),
+            "pressure": round(self.sensor.pressure, 2),
+            "temperature": round(self.sensor.temperature, 2)
+        }

@@ -22,6 +22,7 @@ setup(
         'console_scripts': [
             'imu_node = control.nodes.IMUNode:main',
             'depth_node = control.nodes.DepthNode:main',
+            'temp_node = control.nodes.TempNode:main',
         ],
     },
 )

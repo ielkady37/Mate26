@@ -2,61 +2,53 @@
 
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import Depth  # Make sure this path is correct
-import time
+# Import your custom driver (assuming it's in the same folder)
+from control.services.Depth import Depth
+# Import your custom message
+from sensor_msgs.msg import Depth as DepthMsg
 
 class DepthNode(Node):
-
     def __init__(self):
         super().__init__("depth_node")
 
-        # Initialize the BMP280 sensor
-        self.depth_sensor = Depth(sea_level_pa=1013.25)
-        if self.depth_sensor.sensor:
-            self.get_logger().info("BMP280 sensor initialized successfully.")
-        else:
-            self.get_logger().warn("BMP280 sensor initialization failed.")
-
-        # Publisher: altitude=x, pressure=y, temperature=z
-        self.publisher = self.create_publisher(Depth, "depth", 10)
-
-        # Timer: 50Hz → 0.02s
-        self.timer = self.create_timer(0.02, self.run)
-
-        self.msg = Depth()
-
-    def run(self):
-        if not self.depth_sensor.sensor:
-            self.get_logger().warn("No BMP280 sensor detected.")
+        # 1. Initialize Driver (using Alexandria's 1021.0 hPa)
+        try:
+            self.bmp = Depth(sea_level_pa=1021.0)
+            self.get_logger().info("Sensor Driver Initialized. Taring...")
+            self.bmp.tare()
+        except Exception as e:
+            self.get_logger().error(f"Driver Failure: {e}")
             return
 
+        # 2. Setup ROS Infrastructure
+        self.publisher = self.create_publisher(DepthMsg, "depth", 10)
+        self.timer = self.create_timer(0.02, self.timer_callback) # 50Hz
+
+    def timer_callback(self):
         try:
-            # Read sensor values
-            altitude = self.depth_sensor.read_altitude()
-            pressure = self.depth_sensor.read_pressure()
-            temperature = self.depth_sensor.read_temperature()
+            # Get clean data from driver
+            data = self.bmp.get_readings()
 
-            # Fill message
-            self.msg.altitude = altitude
-            self.msg.pressure = pressure
-            self.msg.temperature = temperature
+            # Fill ROS message
+            msg = DepthMsg()
+            msg.altitude = data["altitude"]
+            msg.pressure = data["pressure"]
+            msg.temperature = data["temperature"]
 
-            self.publisher.publish(self.msg)
-
+            self.publisher.publish(msg)
         except Exception as e:
-            self.get_logger().warn(f"BMP280 read error: {e}")
-
+            self.get_logger().warn(f"Publishing Error: {e}")
 
 def main(args=None):
     rclpy.init(args=args)
+    node = DepthNode()
     try:
-        node = DepthNode()
         rclpy.spin(node)
     except KeyboardInterrupt:
-        print("Stopping...")
+        pass
     finally:
+        node.destroy_node()
         rclpy.shutdown()
-
 
 if __name__ == "__main__":
     main()

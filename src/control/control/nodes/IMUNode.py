@@ -4,6 +4,10 @@ import rclpy
 from rclpy.node import Node
 import math
 
+import time
+import board
+from digitalio import DigitalInOut, Direction
+
 from sensor_msgs.msg import IMU as IMUMessage
 from control.services.IMU import IMU as IMUDriver
 
@@ -13,14 +17,24 @@ class IMUNode(Node):
     def __init__(self):
         super().__init__("imu_node")
 
+        # 1. Perform a manual, solid hardware reset
+        self.reset_pin = DigitalInOut(board.D17) 
+        self.reset_pin.direction = Direction.OUTPUT
+        self.reset_pin.value = False  # Turn sensor off
+        time.sleep(0.1)
+        self.reset_pin.value = True   # Turn sensor on
+        time.sleep(1.0) # WAIT 1 FULL SECOND for the firmware to boot up
+
+        # 2. Start the driver (Notice we DO NOT pass the pin down anymore)
         self.imu = IMUDriver()
+        
         self.imu.Calibrate(5)
         self.get_logger().info("Calibration finished")
         self.publisher = self.create_publisher(IMUMessage, "imu", 10)
 
         # 50Hz
         self.timer = self.create_timer(0.02, self.run)
-
+        
         self.msg = IMUMessage()
 
     def run(self):
