@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(sensor_msgs)  # must match package.xml
+project(rov_msgs)  # must match package.xml
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)

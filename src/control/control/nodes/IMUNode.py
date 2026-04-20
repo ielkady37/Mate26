@@ -8,7 +8,7 @@ import time
 import board
 from digitalio import DigitalInOut, Direction
 
-from sensor_msgs.msg import IMU as IMUMessage
+from rov_msgs.msg import IMU as IMUMessage
 from control.services.IMU import IMU as IMUDriver
 
 
