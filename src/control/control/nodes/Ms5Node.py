@@ -4,7 +4,7 @@ import rclpy
 from rclpy.node import Node
 
 # Importing your custom message
-from sensor_msgs.msg import Ms5 as MS5837Data
+from rov_msgs.msg import Ms5 as MS5837Data
 
 # Importing the driver class we just created above
 from control.services.Ms5 import Ms5 as Ms5Driver
@@ -17,7 +17,7 @@ class Ms5Node(Node):
 
         # 1. Start the driver
         # Change bus=1 to bus=4 if this sensor is on the same extended bus as your IMU!
-        self.ms5 = Ms5(bus=1) 
+        self.ms5 = Ms5Driver(bus=1) 
         self.get_logger().info("MS5837 Driver initialized")
 
         # 2. Setup Publisher

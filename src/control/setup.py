@@ -1,3 +1,5 @@
+import os
+from glob import glob
 from setuptools import find_packages, setup
 
 package_name = 'control'
@@ -10,6 +12,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name, 'launch'), glob(os.path.join('launch', '*launch.[pxy][yma]*'))),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -24,6 +27,7 @@ setup(
             'depth_node = control.nodes.DepthNode:main',
             'temp_node = control.nodes.TempNode:main',
             'ms5_node = control.nodes.Ms5Node:main',
+            'echo_node = control.nodes.EchoNode:main',
         ],
     },
 )

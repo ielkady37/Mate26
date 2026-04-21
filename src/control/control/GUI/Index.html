@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MTR ROV</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;600&display=swap');
+
+        :root {
+            --bg: #0a0e14;
+            --panel: #0f1520;
+            --border: #1e3a5f;
+            --accent: #00d4ff;
+            --accent2: #ff6b00;
+            --text: #c8d8e8;
+            --muted: #4a6080;
+            --ok: #00ff88;
+            --warn: #ffcc00;
+            --err: #ff3355;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Exo 2', sans-serif;
+            font-weight: 300;
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        /* ── Header ── */
+        header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+        }
+        header h1 {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1.4rem;
+            color: var(--accent);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+        .status-row {
+            display: flex;
+            gap: 12px;
+            margin-left: auto;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.75rem;
+        }
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 2px;
+            border: 1px solid var(--border);
+            background: var(--panel);
+        }
+        .dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: var(--err);
+            transition: background 0.4s;
+        }
+        .dot.ok { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+        .dot.warn { background: var(--warn); }
+
+        /* ── Main grid ── */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 16px;
+        }
+
+        /* ── Camera grid ── */
+        .cameras {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto;
+            gap: 10px;
+        }
+
+        .stream-card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+        .stream-card .label {
+            position: absolute;
+            top: 6px; left: 8px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--accent);
+            letter-spacing: 0.1em;
+            background: rgba(0,0,0,0.6);
+            padding: 2px 6px;
+            border-radius: 2px;
+            z-index: 2;
+        }
+        .stream-card .refresh-btn {
+            position: absolute;
+            top: 6px; right: 8px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--muted);
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            padding: 2px 7px;
+            cursor: pointer;
+            z-index: 2;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .stream-card .refresh-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+        .stream-card img {
+            display: block;
+            width: 100%;
+            aspect-ratio: 16/9;
+            object-fit: cover;
+            background: #000;
+        }
+
+        /* ── Right sidebar ── */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 14px;
+        }
+        .panel-title {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* ── Gamepad indicator ── */
+        .gamepad-visual {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .gp-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .axis-bar-wrap {
+            flex: 1;
+        }
+        .axis-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.62rem;
+            color: var(--muted);
+            margin-bottom: 3px;
+        }
+        .axis-track {
+            height: 6px;
+            background: #1a2a3a;
+            border-radius: 3px;
+            position: relative;
+            overflow: hidden;
+        }
+        .axis-fill {
+            position: absolute;
+            top: 0; bottom: 0;
+            background: var(--accent);
+            border-radius: 3px;
+            transition: left 0.05s, width 0.05s;
+        }
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 3px;
+            margin-top: 4px;
+        }
+        .btn-cell {
+            height: 10px;
+            background: #1a2a3a;
+            border-radius: 2px;
+            transition: background 0.05s;
+        }
+        .btn-cell.active { background: var(--accent2); }
+
+        /* ── PID Controls ── */
+        .pid-section-title {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.62rem;
+            color: var(--accent2);
+            letter-spacing: 0.12em;
+            margin: 10px 0 6px;
+            text-transform: uppercase;
+        }
+        .pid-group {
+            display: grid;
+            grid-template-columns: 60px 1fr 1fr 1fr;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 4px;
+        }
+        .pid-group label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.62rem;
+            color: var(--muted);
+        }
+        .pid-group input {
+            background: #0a1520;
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            color: var(--text);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.65rem;
+            padding: 3px 5px;
+            width: 100%;
+            transition: border-color 0.2s;
+        }
+        .pid-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .pid-header {
+            display: grid;
+            grid-template-columns: 60px 1fr 1fr 1fr;
+            gap: 4px;
+            margin-bottom: 2px;
+        }
+        .pid-header span {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.58rem;
+            color: var(--muted);
+            text-align: center;
+        }
+        .send-btn {
+            width: 100%;
+            margin-top: 12px;
+            padding: 9px;
+            background: transparent;
+            border: 1px solid var(--accent);
+            border-radius: 3px;
+            color: var(--accent);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.75rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        .send-btn:hover {
+            background: rgba(0, 212, 255, 0.1);
+            box-shadow: 0 0 12px rgba(0, 212, 255, 0.3);
+        }
+        .send-btn:active { background: rgba(0, 212, 255, 0.2); }
+
+        /* ── Telemetry Values ── */
+        .telemetry-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .telemetry-val {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1.2rem;
+            color: var(--accent);
+        }
+        .telemetry-val.small {
+            font-size: 0.95rem;
+            color: var(--text);
+        }
+
+        /* ── Toast ── */
+        #toast {
+            position: fixed;
+            bottom: 20px; right: 20px;
+            background: var(--panel);
+            border: 1px solid var(--ok);
+            color: var(--ok);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.75rem;
+            padding: 8px 16px;
+            border-radius: 3px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+        }
+        #toast.show { opacity: 1; transform: translateY(0); }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>⬡ ROV Control Panel</h1>
+    <div class="status-row">
+        <div class="status-pill">
+            <div class="dot" id="dot-ros"></div>
+            <span>ROS</span>
+        </div>
+        <div class="status-pill">
+            <div class="dot" id="dot-gamepad"></div>
+            <span id="gp-name">GAMEPAD</span>
+        </div>
+    </div>
+</header>
+
+<div class="main-grid">
+
+    <div class="cameras">
+        <div class="stream-card">
+            <span class="label">CAM 1</span>
+            <button class="refresh-btn" onclick="refreshStream('stream1','http://192.168.137.136:8081/stream.mjpg')">↺ Refresh</button>
+            <img id="stream1" src="http://192.168.137.136:8081/stream.mjpg" alt="IP Cam 1">
+        </div>
+
+        <div class="stream-card">
+            <span class="label">CAM 2</span>
+            <button class="refresh-btn" onclick="refreshStream('stream2','http://192.168.137.136:8082/stream.mjpg')">↺ Refresh</button>
+            <img id="stream2" src="http://192.168.137.136:8082/stream.mjpg" alt="IP Cam 2">
+        </div>
+
+        <div class="stream-card">
+            <span class="label">CAM 3</span>
+            <button class="refresh-btn" onclick="refreshStream('stream3','http://192.168.137.136:8083/stream.mjpg')">↺ Refresh</button>
+            <img id="stream3" src="http://192.168.137.136:8083/stream.mjpg" alt="IP Cam 3">
+        </div>
+    </div>
+
+    <div class="sidebar">
+
+        <div class="panel">
+            <div class="panel-title">Live Telemetry</div>
+            <div class="telemetry-row">
+                <div>
+                    <div class="axis-label">DEPTH</div>
+                    <div class="telemetry-val"><span id="live_depth">0.00</span> m</div>
+                </div>
+                <div>
+                    <div class="axis-label">WATER TEMP</div>
+                    <div class="telemetry-val"><span id="live_temp">0.00</span> °C</div>
+                </div>
+            </div>
+            <hr style="border: 0; border-top: 1px solid var(--border); margin: 10px 0;">
+            <div class="telemetry-row" style="grid-template-columns: 1fr 1fr 1fr;">
+                <div>
+                    <div class="axis-label">ROLL</div>
+                    <div class="telemetry-val small"><span id="live_roll">0.00</span>°</div>
+                </div>
+                <div>
+                    <div class="axis-label">PITCH</div>
+                    <div class="telemetry-val small"><span id="live_pitch">0.00</span>°</div>
+                </div>
+                <div>
+                    <div class="axis-label">YAW</div>
+                    <div class="telemetry-val small"><span id="live_yaw">0.00</span>°</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">Gamepad Input</div>
+            <div class="gamepad-visual">
+                <div class="gp-row">
+                    <div class="axis-bar-wrap">
+                        <div class="axis-label">LX</div>
+                        <div class="axis-track"><div class="axis-fill" id="ax0"></div></div>
+                    </div>
+                    <div class="axis-bar-wrap">
+                        <div class="axis-label">LY</div>
+                        <div class="axis-track"><div class="axis-fill" id="ax1"></div></div>
+                    </div>
+                </div>
+                <div class="gp-row">
+                    <div class="axis-bar-wrap">
+                        <div class="axis-label">RX</div>
+                        <div class="axis-track"><div class="axis-fill" id="ax2"></div></div>
+                    </div>
+                    <div class="axis-bar-wrap">
+                        <div class="axis-label">RY</div>
+                        <div class="axis-track"><div class="axis-fill" id="ax3"></div></div>
+                    </div>
+                </div>
+                <div class="btn-grid" id="btn-grid"></div>
+            </div>
+        </div>
+
+        <div class="panel" style="overflow-y:auto; max-height: calc(100vh - 320px);">
+            <div class="panel-title">PID Constants</div>
+
+            <div class="pid-section-title">Rest Controllers</div>
+            <div class="pid-header"><span></span><span>Kp</span><span>Ki</span><span>Kd</span></div>
+            <div class="pid-group"><label>Yaw</label>   <input type="number" id="kp_yaw"   step="0.01"><input type="number" id="ki_yaw"   step="0.01"><input type="number" id="kd_yaw"   step="0.01"></div>
+            <div class="pid-group"><label>Pitch</label> <input type="number" id="kp_pitch" step="0.01"><input type="number" id="ki_pitch" step="0.01"><input type="number" id="kd_pitch" step="0.01"></div>
+            <div class="pid-group"><label>Heave</label> <input type="number" id="kp_heave" step="0.01"><input type="number" id="ki_heave" step="0.01"><input type="number" id="kd_heave" step="0.01"></div>
+            <div class="pid-group"><label>Roll</label>  <input type="number" id="kp_roll"  step="0.01"><input type="number" id="ki_roll"  step="0.01"><input type="number" id="kd_roll"  step="0.01"></div>
+
+            <div class="pid-section-title">Live Controllers</div>
+            <div class="pid-header"><span></span><span>Kp</span><span>Ki</span><span>Kd</span></div>
+            <div class="pid-group"><label>Pitch H</label>  <input type="number" id="kp_pitch_h" step="0.01"><input type="number" id="ki_pitch_h" step="0.01"><input type="number" id="kd_pitch_h" step="0.01"></div>
+            <div class="pid-group"><label>Pitch V</label>  <input type="number" id="kp_pitch_v" step="0.01"><input type="number" id="ki_pitch_v" step="0.01"><input type="number" id="kd_pitch_v" step="0.01"></div>
+            <div class="pid-group"><label>Heave L</label>  <input type="number" id="kp_heave_live" step="0.01"><input type="number" id="ki_heave_live" step="0.01"><input type="number" id="kd_heave_live" step="0.01"></div>
+            <div class="pid-group"><label>Roll H</label>   <input type="number" id="kp_roll_h" step="0.01"><input type="number" id="ki_roll_h" step="0.01"><input type="number" id="kd_roll_h" step="0.01"></div>
+            <div class="pid-group"><label>Roll V</label>   <input type="number" id="kp_roll_v" step="0.01"><input type="number" id="ki_roll_v" step="0.01"><input type="number" id="kd_roll_v" step="0.01"></div>
+
+            <button class="send-btn" onclick="sendPIDConstants()">▶ Send PID Constants</button>
+        </div>
+
+    </div>
+</div>
+
+<div id="toast">PID constants sent.</div>
+
+<script src="roslib.min.js"></script>
+<script>
+// ── Helpers ──────────────────────────────────────────────
+function refreshStream(id, url) {
+    document.getElementById(id).src = url + '?' + Date.now(); 
+}
+
+function getVal(id) {
+    return parseFloat(document.getElementById(id).value) || 0;
+}
+
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── ROS Connection ────────────────────────────────────────
+// Connecting to Pi's specific IP:
+const ros = new ROSLIB.Ros({ url: 'ws://192.168.137.136:9090' });
+
+ros.on('connection', () => {
+    console.log('Connected to ROS');
+    document.getElementById('dot-ros').classList.add('ok');
+});
+ros.on('error', (e) => {
+    console.error('ROS error:', e);
+    document.getElementById('dot-ros').classList.remove('ok');
+});
+ros.on('close', () => {
+    document.getElementById('dot-ros').classList.remove('ok');
+});
+
+// ── Telemetry Listeners ───────────────────────────────────
+const depthListener = new ROSLIB.Topic({
+    ros : ros,
+    name : '/sensor/ms5/data',
+    messageType : 'rov_msgs/msg/Ms5' 
+});
+
+depthListener.subscribe(function(message) {
+    document.getElementById("live_depth").innerText = message.depth.toFixed(2);
+    document.getElementById("live_temp").innerText = message.temperature.toFixed(2);
+});
+
+const imuListener = new ROSLIB.Topic({
+    ros : ros,
+    name : '/imu',
+    messageType : 'rov_msgs/msg/IMU' 
+});
+
+imuListener.subscribe(function(message) {
+    document.getElementById("live_roll").innerText = message.roll.toFixed(2);
+    document.getElementById("live_pitch").innerText = message.pitch.toFixed(2);
+    document.getElementById("live_yaw").innerText = message.yaw.toFixed(2);
+});
+
+// ── Outbound Topics ───────────────────────────────────────
+const joystickTopic = new ROSLIB.Topic({
+    ros,
+    name: '/Joy',
+    messageType: 'sensor_msgs/msg/Joy' // Note: Ensure this matches ROS 2 convention
+});
+
+const pidTopic = new ROSLIB.Topic({
+    ros,
+    name: '/constants',
+    messageType: 'std_msgs/msg/Float32MultiArray' // Note: Ensure this matches ROS 2 convention
+});
+
+// ── Gamepad ───────────────────────────────────────────────
+let activeGamepad = null;
+const gpDot  = document.getElementById('dot-gamepad');
+const gpName = document.getElementById('gp-name');
+
+const btnGrid = document.getElementById('btn-grid');
+for (let i = 0; i < 16; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'btn-cell';
+    cell.id = 'btn-' + i;
+    btnGrid.appendChild(cell);
+}
+
+window.addEventListener('gamepadconnected', (e) => {
+    console.log('Gamepad connected:', e.gamepad.id);
+    activeGamepad = e.gamepad;
+    gpDot.classList.add('ok');
+    gpName.textContent = e.gamepad.id.slice(0, 14).toUpperCase();
+});
+
+window.addEventListener('gamepaddisconnected', (e) => {
+    console.log('Gamepad disconnected');
+    activeGamepad = null;
+    gpDot.classList.remove('ok');
+    gpName.textContent = 'GAMEPAD';
+});
+
+function getActiveGamepad() {
+    const pads = navigator.getGamepads();
+    for (let i = 0; i < pads.length; i++) {
+        if (pads[i]) return pads[i];
+    }
+    return null;
+}
+
+function updateAxisBar(id, value) {
+    const pct  = ((value + 1) / 2) * 100;
+    const half = 50;
+    const el   = document.getElementById(id);
+    if (!el) return;
+    if (value >= 0) {
+        el.style.left  = half + '%';
+        el.style.width = (pct - half) + '%';
+    } else {
+        el.style.left  = pct + '%';
+        el.style.width = (half - pct) + '%';
+    }
+}
+
+function sendJoystickData() {
+    const gp = getActiveGamepad();
+    if (!gp) return;
+
+    const axes    = Array.from(gp.axes).map(v => parseFloat(v.toFixed(3)));
+    const buttons = Array.from(gp.buttons).map(b => b.pressed ? 1 : 0);
+
+    for (let i = 0; i < Math.min(4, axes.length); i++) {
+        updateAxisBar('ax' + i, axes[i]);
+    }
+    buttons.forEach((val, i) => {
+        const cell = document.getElementById('btn-' + i);
+        if (cell) cell.classList.toggle('active', val === 1);
+    });
+
+    const now   = Date.now();
+    const secs  = Math.floor(now / 1000);
+    const nsecs = Math.round((now % 1000) * 1e6);
+
+    const msg = new ROSLIB.Message({
+        header: { stamp: { sec: secs, nanosec: nsecs }, frame_id: 'gamepad' },
+        axes: axes,
+        buttons: buttons
+    });
+
+    joystickTopic.publish(msg);
+}
+
+setInterval(sendJoystickData, 10);
+
+// ── PID Send ──────────────────────────────────────────────
+function sendPIDConstants() {
+    const data = [
+        getVal('kp_yaw'),   getVal('ki_yaw'),   getVal('kd_yaw'),
+        getVal('kp_pitch'),  getVal('ki_pitch'),  getVal('kd_pitch'),
+        getVal('kp_heave'),  getVal('ki_heave'),  getVal('kd_heave'),
+        getVal('kp_roll'),   getVal('ki_roll'),   getVal('kd_roll'),
+        getVal('kp_pitch_h'),    getVal('ki_pitch_h'),    getVal('kd_pitch_h'),
+        getVal('kp_pitch_v'),    getVal('ki_pitch_v'),    getVal('kd_pitch_v'),
+        getVal('kp_heave_live'), getVal('ki_heave_live'), getVal('kd_heave_live'),
+        getVal('kp_roll_h'),     getVal('ki_roll_h'),     getVal('kd_roll_h'),
+        getVal('kp_roll_v'),     getVal('ki_roll_v'),     getVal('kd_roll_v'),
+    ];
+
+    if (data.length !== 27) {
+        console.error('Expected 27 values, got', data.length);
+        return;
+    }
+
+    pidTopic.publish(new ROSLIB.Message({ layout: {dim: [], data_offset: 0}, data: data }));
+    console.log('Sent PID constants:', data);
+    showToast('PID constants sent ✓');
+}
+</script>
+
+</body>
+</html>

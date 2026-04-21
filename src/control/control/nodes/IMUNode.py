@@ -3,10 +3,7 @@
 import rclpy
 from rclpy.node import Node
 import math
-
 import time
-import board
-from digitalio import DigitalInOut, Direction
 
 from rov_msgs.msg import IMU as IMUMessage
 from control.services.IMU import IMU as IMUDriver
@@ -17,22 +14,17 @@ class IMUNode(Node):
     def __init__(self):
         super().__init__("imu_node")
 
-        # 1. Perform a manual, solid hardware reset
-        self.reset_pin = DigitalInOut(board.D17) 
-        self.reset_pin.direction = Direction.OUTPUT
-        self.reset_pin.value = False  # Turn sensor off
-        time.sleep(0.1)
-        self.reset_pin.value = True   # Turn sensor on
-        time.sleep(1.0) # WAIT 1 FULL SECOND for the firmware to boot up
+        self.get_logger().info("Starting IMU Driver...")
 
-        # 2. Start the driver (Notice we DO NOT pass the pin down anymore)
+        # Start the driver (Relying on Software I2C via boot config for stability)
         self.imu = IMUDriver()
         
         self.imu.Calibrate(5)
         self.get_logger().info("Calibration finished")
+        
         self.publisher = self.create_publisher(IMUMessage, "imu", 10)
 
-        # 50Hz
+        # 50Hz timer
         self.timer = self.create_timer(0.02, self.run)
         
         self.msg = IMUMessage()
@@ -49,7 +41,7 @@ class IMUNode(Node):
             self.publisher.publish(self.msg)
 
         except Exception as e:
-            # This will now actually trigger when the I2C bus fails!
+            # Logs the error but keeps the node alive to try again next frame
             self.get_logger().warn(f"IMU read failed, skipping frame: {e}")
 
 

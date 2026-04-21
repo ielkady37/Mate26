@@ -5,7 +5,7 @@ import time
 from control.services import ms5837
 
 class Ms5:
-    def __init__(self, bus: int = 1, density: float = ms5837.DENSITY_FRESHWATER):
+    def __init__(self, bus: int = 4, density: float = ms5837.DENSITY_FRESHWATER):
         """Initialize MS5837 sensor"""
         try:
             # Note: MS5837_30BA is the standard 30 Bar model.

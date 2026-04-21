@@ -5,7 +5,7 @@ from rclpy.node import Node
 # Import your custom driver (assuming it's in the same folder)
 from control.services.Depth import Depth
 # Import your custom message
-from sensor_msgs.msg import Depth as DepthMsg
+from rov_msgs.msg import Depth as DepthMsg
 
 class DepthNode(Node):
     def __init__(self):
