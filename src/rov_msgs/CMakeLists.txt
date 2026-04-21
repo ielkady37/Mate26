@@ -11,6 +11,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/IMU.msg"
   "msg/Temp.msg"
   "msg/Ms5.msg"
+  "msg/Joy.msg"
 )
 
 ament_package()

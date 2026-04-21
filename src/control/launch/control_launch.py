@@ -43,4 +43,11 @@ def generate_launch_description():
             output='screen',
             parameters=[{'port': 9090}]
         )
+        # 6. Start the Motor Driver Node
+        Node(
+            package='control',
+            executable='pca_node',
+            name='pca_node',
+            output='screen'
+        )
     ])

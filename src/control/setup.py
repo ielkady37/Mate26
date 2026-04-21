@@ -28,6 +28,8 @@ setup(
             'temp_node = control.nodes.TempNode:main',
             'ms5_node = control.nodes.Ms5Node:main',
             'echo_node = control.nodes.EchoNode:main',
+            'pca_node = control.nodes.PCANode:main',
+            'joy_listener = control.nodes.JoyListenerNode:main',
         ],
     },
 )
