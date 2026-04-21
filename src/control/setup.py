@@ -30,6 +30,7 @@ setup(
             'echo_node = control.nodes.EchoNode:main',
             'pca_node = control.nodes.PCANode:main',
             'joy_listener = control.nodes.JoyListenerNode:main',
+            'main_node = control.nodes.MainNode:main',
         ],
     },
 )
