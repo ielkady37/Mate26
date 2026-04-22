@@ -12,7 +12,11 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        # This line includes the launch files
         (os.path.join('share', package_name, 'launch'), glob(os.path.join('launch', '*launch.[pxy][yma]*'))),
+        
+        # ADD THIS LINE TO INCLUDE THE GUI FOLDER
+        (os.path.join('share', package_name, 'GUI'), glob('control/GUI/*')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -31,6 +35,7 @@ setup(
             'pca_node = control.nodes.PCANode:main',
             'joy_listener = control.nodes.JoyListenerNode:main',
             'main_node = control.nodes.MainNode:main',
+            'camera_node = control.nodes.CameraNode:main'
         ],
     },
 )

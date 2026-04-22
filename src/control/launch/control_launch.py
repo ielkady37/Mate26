@@ -42,12 +42,20 @@ def generate_launch_description():
             name='rosbridge_websocket',
             output='screen',
             parameters=[{'port': 9090}]
-        )
+        ),
         # 6. Start the Motor Driver Node
         Node(
             package='control',
             executable='pca_node',
             name='pca_node',
             output='screen'
-        )
+        ),
+        Node(
+            package='control',
+            executable='camera_node',
+            name='camera_node',
+            output='screen'
+        ),
+        
+
     ])

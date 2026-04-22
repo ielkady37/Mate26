@@ -330,21 +330,21 @@
     <div class="cameras">
         <div class="stream-card">
             <span class="label">CAM 1</span>
-            <button class="refresh-btn" onclick="refreshStream('stream1','http://192.168.137.136:8081/stream.mjpg')">↺ Refresh</button>
-            <img id="stream1" src="http://192.168.137.136:8081/stream.mjpg" alt="IP Cam 1">
+            <button class="refresh-btn" onclick="refreshStream('stream1','http://192.168.137.65:8083/stream_left.mjpg')">↺ Refresh</button>
+            <img id="stream1" src="http://192.168.137.65:8083/stream_left.mjpg" alt="IP Cam 1">
         </div>
 
         <div class="stream-card">
             <span class="label">CAM 2</span>
-            <button class="refresh-btn" onclick="refreshStream('stream2','http://192.168.137.136:8082/stream.mjpg')">↺ Refresh</button>
-            <img id="stream2" src="http://192.168.137.136:8082/stream.mjpg" alt="IP Cam 2">
+            <button class="refresh-btn" onclick="refreshStream('stream2','http://192.168.137.65:8083/stream_right.mjpg')">↺ Refresh</button>
+            <img id="stream2" src="http://192.168.137.65:8083/stream_right.mjpg" alt="IP Cam 2">
         </div>
-
+<!-- 
         <div class="stream-card">
             <span class="label">CAM 3</span>
-            <button class="refresh-btn" onclick="refreshStream('stream3','http://192.168.137.136:8083/stream.mjpg')">↺ Refresh</button>
-            <img id="stream3" src="http://192.168.137.136:8083/stream.mjpg" alt="IP Cam 3">
-        </div>
+            <button class="refresh-btn" onclick="refreshStream('stream3','http://192.168.137.65:8083/stream.mjpg')">↺ Refresh</button>
+            <img id="stream3" src="http://192.168.137.65:8083/stream.mjpg" alt="IP Cam 3">
+        </div> -->
     </div>
 
     <div class="sidebar">
@@ -451,7 +451,7 @@ function showToast(msg) {
 
 // ── ROS Connection ────────────────────────────────────────
 // Connecting to Pi's specific IP:
-const ros = new ROSLIB.Ros({ url: 'ws://192.168.137.136:9090' });
+const ros = new ROSLIB.Ros({ url: 'ws://192.168.137.65:9090' });
 
 ros.on('connection', () => {
     console.log('Connected to ROS');
